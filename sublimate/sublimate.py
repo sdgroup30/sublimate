@@ -26,10 +26,11 @@ class victimNode:
                 # If yes, insert into list
                 if(path.weight > self.compromisePaths[i].weight):
                     self.compromisePaths.insert(i, path)
+                    break
 
-                # If it is the new worst path, insert at end
-                elif(i == len(self.compromisePaths)):
-                    self.compromisePaths.append(path)
+            # If it is the new worst path, insert at end
+            else(i == len(self.compromisePaths)):
+                self.compromisePaths.append(path)
 
     def CalculateScore(self):
 
