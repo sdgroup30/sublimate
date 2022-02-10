@@ -29,7 +29,7 @@ class victimNode:
                     break
 
             # If it is the new worst path, insert at end
-            else(i == len(self.compromisePaths)):
+            else:
                 self.compromisePaths.append(path)
 
     def CalculateScore(self):
