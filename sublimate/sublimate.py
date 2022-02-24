@@ -1,4 +1,6 @@
 import networkx as nx
+import argparse
+import json
 
 
 class victimNode:
@@ -66,7 +68,7 @@ class Network:
     def __init__(self, data, victimNodes, attackingNode, triviumData):
 
         # Import the graph
-        self.G = nx.jit_graph(data)
+        self.G = nx.readwrite.node_link_graph(json.loads(data))
         
         # Init the attacker and the victims
         self.victimNodes = []
@@ -81,25 +83,27 @@ class Network:
 
         print(len(self.victimNodes))
 
+    
     # Init without graph for testing
-    def __init__(self, victimNodes, attackingNode, triviumData):
+    #def __init__(self, victimNodes, attackingNode, triviumData):
 
         # Init the attacker and the victims
-        self.victimNodes = []
-        for victim in victimNodes:
+     #   self.victimNodes = []
+      #  for victim in victimNodes:
 
             # Create a new victim node and add to list
-            self.victimNodes.append(victimNode(victim))
+       #     self.victimNodes.append(victimNode(victim))
 
-        self.attackingNode = attackingNode
+#        self.attackingNode = attackingNode
 
-        self.triviumData = triviumData
+ #       self.triviumData = triviumData
 
 
     def Sublimate(self):
 
         # Graph stuff goes here
         return True
+
 
     def Export(self, fileName):
 
@@ -146,14 +150,31 @@ class Network:
 # Testing zone
 def main():
 
-    # Create dummy data
+    # initialize parser
+    parser = argparse.ArgumentParser()
+
+    # parse the arguements
+    parser.add_argument("-m", "--model", type=str, help="Model Name")
+    parser.add_argument("-d", "--diagram", type=str, help="Diagram Name")
+    parser.add_argument("-i", "--input", type=str, help="Input ", required=True)
+    parser.add_argument("-o", "--output", type=str, help="Nessus Files", required=True)
+    parser.add_argument("-a", "--attacker", type=str, help="Override attacking nodes from diagram")
+    parser.add_argument("-v", "--victim", type=str, help="Override victim nodes from diagram")
+    args = parser.parse_args()
+
+    # Create placeholder data
     triviumData = {}
-    triviumData['diagramName'] = 'Test Diagram'
-    victimNodes = ['10.0.0.1', '10.0.0.2']
-    attackingNode = '10.0.133.7'
+    triviumData['diagramName'] = args.diagram
+    victimNodes = [args.victim]
+    attackingNode = args.attacker
+
+    # Read in data
+    f = open(args.input, "r")
+    data = f.read()
+    f.close()
 
     # Create test network
-    testing = Network(victimNodes, attackingNode, triviumData)
+    testing = Network(data, victimNodes, attackingNode, triviumData)
 
     # Create two different paths
     path1 = compromisePath()
@@ -171,7 +192,7 @@ def main():
     testing.victimNodes[0].addPath(path2)
 
     # Run the export function
-    testing.Export("test")
+    testing.Export(args.output)
 
 if __name__ == "__main__":
     main()
