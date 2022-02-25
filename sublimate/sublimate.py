@@ -1,6 +1,7 @@
 import networkx as nx
 import argparse
 import json
+import math
 
 
 class victimNode:
@@ -100,8 +101,36 @@ class Network:
 
 
     def Sublimate(self):
+        
+        def edgeWeight(u, v, w):
+            score = float(self.G.nodes[v]['distill_score'])
+            if ((score) >= 1): score /= 10 # this is for testing, to get score in [0,1]
+            return -math.log2(score)
+        
+        def ipToTid(ip):
+            trivium_id = [id for id,attributes in self.G.nodes.items() if attributes['ip'] == ip][0]
+            return trivium_id
+        
+        def tidToIp(tid):
+            return self.G.nodes[tid]['ip']
+        
 
-        # Graph stuff goes here
+        length, path = nx.single_source_dijkstra(self.G, source=ipToTid(self.attackingNode), weight=edgeWeight)
+
+
+        for victim in self.victimNodes:
+            trivium_id = ipToTid(victim.ip)
+            if (trivium_id not in path.keys()):
+                continue # there is no path
+
+            path_to_victim = compromisePath()
+            path_to_victim.addToWeight(2**-length[trivium_id])
+            ipPath = list(map(tidToIp, path[trivium_id]))
+            path_to_victim.path = ipPath[:-1]
+
+            victim.addPath(path_to_victim)
+            victim.path = ipPath
+            
         return True
 
 
@@ -141,7 +170,7 @@ class Network:
                     f.write(victim.ip + '\n')
 
                     # Output the weight and number of nodes
-                    f.write("**Weight of Path:** " + str(compromisePath.weight) + "\n\n")
+                    f.write("**Weight of Path:** {:.6f}\n\n".format(compromisePath.weight))
                     f.write("**Number of Nodes in Path:** " + str(len(compromisePath.path) + 1) + "\n\n")
 
 
@@ -176,20 +205,9 @@ def main():
     # Create test network
     testing = Network(data, victimNodes, attackingNode, triviumData)
 
-    # Create two different paths
-    path1 = compromisePath()
-    path1.addToPath('10.0.0.4', 6)
-    path1.addToPath('10.0.0.7', 8)
+    # Find paths to victims
+    testing.Sublimate()
 
-    path2 = compromisePath()
-    path2.addToPath('10.0.0.2', 12)
-    path2.addToPath('10.2.2.57', 22)
-    path2.addToPath('192.168.1.1', 30)
-
-    # Add both paths to the first victim
-    # The second path has a higher weight
-    testing.victimNodes[0].addPath(path1)
-    testing.victimNodes[0].addPath(path2)
 
     # Run the export function
     testing.Export(args.output)
