@@ -1,4 +1,7 @@
 import networkx as nx
+import argparse
+import json
+import math
 
 
 class victimNode:
@@ -66,7 +69,7 @@ class Network:
     def __init__(self, data, victimNodes, attackingNode, triviumData):
 
         # Import the graph
-        self.G = nx.jit_graph(data)
+        self.G = nx.readwrite.node_link_graph(json.loads(data))
         
         # Init the attacker and the victims
         self.victimNodes = []
@@ -81,25 +84,55 @@ class Network:
 
         print(len(self.victimNodes))
 
+    
     # Init without graph for testing
-    def __init__(self, victimNodes, attackingNode, triviumData):
+    #def __init__(self, victimNodes, attackingNode, triviumData):
 
         # Init the attacker and the victims
-        self.victimNodes = []
-        for victim in victimNodes:
+     #   self.victimNodes = []
+      #  for victim in victimNodes:
 
             # Create a new victim node and add to list
-            self.victimNodes.append(victimNode(victim))
+       #     self.victimNodes.append(victimNode(victim))
 
-        self.attackingNode = attackingNode
+#        self.attackingNode = attackingNode
 
-        self.triviumData = triviumData
+ #       self.triviumData = triviumData
 
 
     def Sublimate(self):
+        
+        def edgeWeight(u, v, w):
+            score = float(self.G.nodes[v]['distill_score'])
+            if ((score) >= 1): score /= 10 # this is for testing, to get score in [0,1]
+            return -math.log2(score)
+        
+        def ipToTid(ip):
+            trivium_id = [id for id,attributes in self.G.nodes.items() if attributes['ip'] == ip][0]
+            return trivium_id
+        
+        def tidToIp(tid):
+            return self.G.nodes[tid]['ip']
+        
 
-        # Graph stuff goes here
+        length, path = nx.single_source_dijkstra(self.G, source=ipToTid(self.attackingNode), weight=edgeWeight)
+
+
+        for victim in self.victimNodes:
+            trivium_id = ipToTid(victim.ip)
+            if (trivium_id not in path.keys()):
+                continue # there is no path
+
+            path_to_victim = compromisePath()
+            path_to_victim.addToWeight(2**-length[trivium_id])
+            ipPath = list(map(tidToIp, path[trivium_id]))
+            path_to_victim.path = ipPath[:-1]
+
+            victim.addPath(path_to_victim)
+            victim.path = ipPath
+            
         return True
+
 
     def Export(self, fileName):
 
@@ -137,7 +170,7 @@ class Network:
                     f.write(victim.ip + '\n')
 
                     # Output the weight and number of nodes
-                    f.write("**Weight of Path:** " + str(compromisePath.weight) + "\n\n")
+                    f.write("**Weight of Path:** {:.6f}\n\n".format(compromisePath.weight))
                     f.write("**Number of Nodes in Path:** " + str(len(compromisePath.path) + 1) + "\n\n")
 
 
@@ -146,32 +179,38 @@ class Network:
 # Testing zone
 def main():
 
-    # Create dummy data
+    # initialize parser
+    parser = argparse.ArgumentParser()
+
+    # parse the arguements
+    parser.add_argument("-m", "--model", type=str, help="Model Name")
+    parser.add_argument("-d", "--diagram", type=str, help="Diagram Name")
+    parser.add_argument("-i", "--input", type=str, help="Input ", required=True)
+    parser.add_argument("-o", "--output", type=str, help="Nessus Files", required=True)
+    parser.add_argument("-a", "--attacker", type=str, help="Override attacking nodes from diagram")
+    parser.add_argument("-v", "--victim", type=str, help="Override victim nodes from diagram")
+    args = parser.parse_args()
+
+    # Create placeholder data
     triviumData = {}
-    triviumData['diagramName'] = 'Test Diagram'
-    victimNodes = ['10.0.0.1', '10.0.0.2']
-    attackingNode = '10.0.133.7'
+    triviumData['diagramName'] = args.diagram
+    victimNodes = [args.victim]
+    attackingNode = args.attacker
+
+    # Read in data
+    f = open(args.input, "r")
+    data = f.read()
+    f.close()
 
     # Create test network
-    testing = Network(victimNodes, attackingNode, triviumData)
+    testing = Network(data, victimNodes, attackingNode, triviumData)
 
-    # Create two different paths
-    path1 = compromisePath()
-    path1.addToPath('10.0.0.4', 6)
-    path1.addToPath('10.0.0.7', 8)
+    # Find paths to victims
+    testing.Sublimate()
 
-    path2 = compromisePath()
-    path2.addToPath('10.0.0.2', 12)
-    path2.addToPath('10.2.2.57', 22)
-    path2.addToPath('192.168.1.1', 30)
-
-    # Add both paths to the first victim
-    # The second path has a higher weight
-    testing.victimNodes[0].addPath(path1)
-    testing.victimNodes[0].addPath(path2)
 
     # Run the export function
-    testing.Export("test")
+    testing.Export(args.output)
 
 if __name__ == "__main__":
     main()
