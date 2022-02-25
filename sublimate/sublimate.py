@@ -103,8 +103,8 @@ class Network:
     def Sublimate(self):
         
         def edgeWeight(u, v, w):
-            score = self.G.nodes[v]['distill_score']
-            if (score >= 1): score /= 10 # this is for testing, to get score in [0,1]
+            score = float(self.G.nodes[v]['distill_score'])
+            if ((score) >= 1): score /= 10 # this is for testing, to get score in [0,1]
             return -math.log2(score)
         
         def ipToTid(ip):
