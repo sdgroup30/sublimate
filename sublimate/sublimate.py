@@ -177,9 +177,10 @@ class Network:
 
     def MermaidExport(self, fileName):
 
-        # Create the header of the document
+        # Create the header of the document and the summary graph
         text = ""
         header = ('<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>\n<h1> ' + str(self.triviumData['diagramName']) + ' Attack Traversal Report\n')
+        summaryGraph = "## Summary Graph\n~~~mermaid\nflowchart LR\n"
 
         # State the attacking node
         text += "## Attacking Node: " + self.attackingNode + '\n'
@@ -197,27 +198,37 @@ class Network:
                 # For each victim, loop through the paths and print them
                 for compromisePath in victim.compromisePaths:
 
+                    # Temporary Variable to store the graph
+                    temp = ""
+
                     # Create the mermaid graph
                     text += '~~~mermaid\nflowchart LR\n'
 
                     # loop through the ips in the path and print arrows between them
                     i = 0
                     for i in range(len(compromisePath.path) - 1):
-                        text += compromisePath.path[i]
-                        text += " --> "
-                        text += compromisePath.path[i+1] + "\n"
+                        temp += compromisePath.path[i]
+                        temp += " --> "
+                        temp += compromisePath.path[i+1] + "\n"
 
                     # At the end output the path to the victim node
-                    text += compromisePath.path[len(compromisePath.path)-1]
-                    text += " --> "
-                    text += (victim.ip + '\n~~~\n')
+                    temp += compromisePath.path[len(compromisePath.path)-1]
+                    temp += " --> "
+                    temp += (victim.ip + '\n')
+
+                    # Attach the temp graph to the diagram in both places
+                    text += temp
+                    summaryGraph += temp
 
                     # Output the weight and number of nodes
-                    text += "#### Weight of Path: {:.6f}\n\n".format(compromisePath.weight)
+                    text += "~~~\n#### Weight of Path: {:.6f}\n\n".format(compromisePath.weight)
                     text += "#### Number of Nodes in Path: " + str(len(compromisePath.path) + 1) + "\n\n"
+
+                    
         
         # Convert the text into mermaid markdown
-        html = markdown.markdown(text, extensions=['md_mermaid'])
+        summaryGraph += "~~~\n\n"
+        html = markdown.markdown(summaryGraph + text, extensions=['md_mermaid'])
         final = header + html
         f = open(fileName + ".html", "w")
         f.write(final)
