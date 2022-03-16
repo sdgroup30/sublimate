@@ -253,28 +253,23 @@ def main():
     testing = Network(data, victimNodes, attackingNode, triviumData)
 
     # Find paths to victims
-   # testing.Sublimate()
+    testing.Sublimate()
 
 
+    # # Create two different paths
+    # path1 = compromisePath()
+    # path1.addToPath('10.0.0.4', 6)
+    # path1.addToPath('10.0.0.7', 8)
 
+    # path2 = compromisePath()
+    # path2.addToPath('10.0.0.2', 12)
+    # path2.addToPath('10.2.2.57', 22)
+    # path2.addToPath('192.168.1.1', 30)
 
-    # Create test network
-    #testing = Network(victimNodes, attackingNode, triviumData)
-
-    # Create two different paths
-    path1 = compromisePath()
-    path1.addToPath('10.0.0.4', 6)
-    path1.addToPath('10.0.0.7', 8)
-
-    path2 = compromisePath()
-    path2.addToPath('10.0.0.2', 12)
-    path2.addToPath('10.2.2.57', 22)
-    path2.addToPath('192.168.1.1', 30)
-
-    # Add both paths to the first victim
-    # The second path has a higher weight
-    testing.victimNodes[0].addPath(path1)
-    testing.victimNodes[0].addPath(path2)
+    # # Add both paths to the first victim
+    # # The second path has a higher weight
+    # testing.victimNodes[0].addPath(path1)
+    # testing.victimNodes[0].addPath(path2)
 
     # Run the export function
     testing.MermaidExport(args.output)
