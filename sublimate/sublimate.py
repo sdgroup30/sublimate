@@ -2,6 +2,7 @@ import networkx as nx
 import argparse
 import json
 import math
+import markdown
 
 
 class victimNode:
@@ -82,8 +83,6 @@ class Network:
 
         self.triviumData = triviumData
 
-        print(len(self.victimNodes))
-
     
     # Init without graph for testing
     #def __init__(self, victimNodes, attackingNode, triviumData):
@@ -134,7 +133,7 @@ class Network:
         return True
 
 
-    def Export(self, fileName):
+    def MarkdownExport(self, fileName):
 
         # Open the file and write the header
         f = open(fileName + ".md", "w")
@@ -176,6 +175,54 @@ class Network:
 
         f.close()
 
+    def MermaidExport(self, fileName):
+
+        # Create the header of the document
+        text = ""
+        header = ('<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>\n<h1> ' + str(self.triviumData['diagramName']) + ' Attack Traversal Report\n')
+
+        # State the attacking node
+        text += "## Attacking Node: " + self.attackingNode + '\n'
+
+        # Loop through the victims
+        for victim in self.victimNodes:
+            text += ("## Victim Node: " + victim.ip + '\n')
+
+            # Edge case: if there are no paths, print notice
+            if(len(victim.compromisePaths) == 0):
+                text += '#### No Paths of Compromise for This Node\n'
+
+            else:
+
+                # For each victim, loop through the paths and print them
+                for compromisePath in victim.compromisePaths:
+
+                    # Create the mermaid graph
+                    text += '~~~mermaid\nflowchart LR\n'
+
+                    # loop through the ips in the path and print arrows between them
+                    i = 0
+                    for i in range(len(compromisePath.path) - 1):
+                        text += compromisePath.path[i]
+                        text += " --> "
+                        text += compromisePath.path[i+1] + "\n"
+
+                    # At the end output the path to the victim node
+                    text += compromisePath.path[len(compromisePath.path)-1]
+                    text += " --> "
+                    text += (victim.ip + '\n~~~\n')
+
+                    # Output the weight and number of nodes
+                    text += "#### Weight of Path: {:.6f}\n\n".format(compromisePath.weight)
+                    text += "#### Number of Nodes in Path: " + str(len(compromisePath.path) + 1) + "\n\n"
+        
+        # Convert the text into mermaid markdown
+        html = markdown.markdown(text, extensions=['md_mermaid'])
+        final = header + html
+        f = open(fileName + ".html", "w")
+        f.write(final)
+        f.close()
+
 # Testing zone
 def main():
 
@@ -190,7 +237,7 @@ def main():
     parser.add_argument("-a", "--attacker", type=str, help="Override attacking nodes from diagram")
     parser.add_argument("-v", "--victim", type=str, help="Override victim nodes from diagram")
     args = parser.parse_args()
-
+ 
     # Create placeholder data
     triviumData = {}
     triviumData['diagramName'] = args.diagram
@@ -206,11 +253,33 @@ def main():
     testing = Network(data, victimNodes, attackingNode, triviumData)
 
     # Find paths to victims
-    testing.Sublimate()
+   # testing.Sublimate()
 
+
+
+
+    # Create test network
+    #testing = Network(victimNodes, attackingNode, triviumData)
+
+    # Create two different paths
+    path1 = compromisePath()
+    path1.addToPath('10.0.0.4', 6)
+    path1.addToPath('10.0.0.7', 8)
+
+    path2 = compromisePath()
+    path2.addToPath('10.0.0.2', 12)
+    path2.addToPath('10.2.2.57', 22)
+    path2.addToPath('192.168.1.1', 30)
+
+    # Add both paths to the first victim
+    # The second path has a higher weight
+    testing.victimNodes[0].addPath(path1)
+    testing.victimNodes[0].addPath(path2)
 
     # Run the export function
-    testing.Export(args.output)
+    testing.MermaidExport(args.output)
+
+
 
 if __name__ == "__main__":
     main()
