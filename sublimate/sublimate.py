@@ -215,7 +215,6 @@ class Network:
 
                         # Add one occurence to the node that is being accessed for the summaryGraph
                         if not compromisePath.path[i+1] in summaryGraphCounter:
-                            print("0 found")
                             summaryGraphCounter[compromisePath.path[i+1]] = 0
 
                         summaryGraphCounter[compromisePath.path[i+1]] += 1
@@ -246,7 +245,6 @@ class Network:
         for node in summaryGraphCounter:
 
             redness = '{:02x}'.format(int(((summaryGraphCounter[node] / top) * -255) + 255))
-            print(redness)
             redval = "FF" + redness + redness
             summaryGraph += "classDef cl" + node.replace('.','') +" fill:#" + redval + ";\n"
             summaryGraph += "class " + node + " cl" + node.replace('.','') + ";\n"
