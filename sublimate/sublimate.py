@@ -3,6 +3,7 @@ import argparse
 import json
 import math
 import markdown
+import matplotlib.pyplot as plt
 
 
 class victimNode:
@@ -181,6 +182,7 @@ class Network:
         text = ""
         header = ('<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>\n<h1> ' + str(self.triviumData['diagramName']) + ' Attack Traversal Report\n')
         summaryGraph = "## Summary Graph\n~~~mermaid\nflowchart LR\n"
+        summaryGraphCounter = {}
 
         # State the attacking node
         text += "## Attacking Node: " + self.attackingNode + '\n'
@@ -208,12 +210,19 @@ class Network:
                     i = 0
                     for i in range(len(compromisePath.path) - 1):
                         temp += compromisePath.path[i]
-                        temp += " --> "
+                        temp += "-->"
                         temp += compromisePath.path[i+1] + "\n"
+
+                        # Add one occurence to the node that is being accessed for the summaryGraph
+                        if not compromisePath.path[i+1] in summaryGraphCounter:
+                            print("0 found")
+                            summaryGraphCounter[compromisePath.path[i+1]] = 0
+
+                        summaryGraphCounter[compromisePath.path[i+1]] += 1
 
                     # At the end output the path to the victim node
                     temp += compromisePath.path[len(compromisePath.path)-1]
-                    temp += " --> "
+                    temp += "-->"
                     temp += (victim.ip + '\n')
 
                     # Attach the temp graph to the diagram in both places
@@ -226,8 +235,24 @@ class Network:
 
                     
         
-        # Convert the text into mermaid markdown
+        # Finish formatting the summary graph
+
+        # Find the node with the highest weight
+        if len(summaryGraphCounter) != 0:
+            top = max(summaryGraphCounter, key=summaryGraphCounter.get)
+            top = summaryGraphCounter[top]
+
+        # Loop through the nodes and apply the color weighting
+        for node in summaryGraphCounter:
+
+            redness = '{:02x}'.format(int(((summaryGraphCounter[node] / top) * -255) + 255))
+            print(redness)
+            redval = "FF" + redness + redness
+            summaryGraph += "classDef cl" + node.replace('.','') +" fill:#" + redval + ";\n"
+            summaryGraph += "class " + node + " cl" + node.replace('.','') + ";\n"
         summaryGraph += "~~~\n\n"
+        
+        # Convert the text into mermaid markdown
         html = markdown.markdown(summaryGraph + text, extensions=['md_mermaid'])
         final = header + html
         f = open(fileName + ".html", "w")
@@ -266,21 +291,31 @@ def main():
     # Find paths to victims
     testing.Sublimate()
 
-
     # # Create two different paths
     # path1 = compromisePath()
     # path1.addToPath('10.0.0.4', 6)
     # path1.addToPath('10.0.0.7', 8)
+    # path1.addToPath('10.2.2.57', 22)
+    # path1.addToPath('10.2.2.58', 22)
+    # path1.addToPath('10.0.0.8', 22)
+
 
     # path2 = compromisePath()
     # path2.addToPath('10.0.0.2', 12)
     # path2.addToPath('10.2.2.57', 22)
     # path2.addToPath('192.168.1.1', 30)
+    # path2.addToPath('10.0.0.8', 6)
+
+    # path3 = compromisePath()
+    # path3.addToPath('10.0.0.6', 6)
+    # path3.addToPath('10.2.2.58', 22)
+    # path3.addToPath('10.0.0.8', 22)
 
     # # Add both paths to the first victim
     # # The second path has a higher weight
     # testing.victimNodes[0].addPath(path1)
     # testing.victimNodes[0].addPath(path2)
+    # testing.victimNodes[0].addPath(path3)
 
     # Run the export function
     testing.MermaidExport(args.output)
