@@ -2,9 +2,14 @@ import networkx as nx
 import argparse
 import json
 import math
-import trivium
 import markdown
 import matplotlib.pyplot as plt
+import pdfkit
+import pandoc
+import subprocess
+import os
+import trivium
+
 
 
 class victimNode:
@@ -73,7 +78,7 @@ class Network:
 
         # Import the graph
         self.G = nx.readwrite.node_link_graph(json.loads(data))
-        
+
         # Init the attacker and the victims
         self.victimNodes = []
         for victim in victimNodes:
@@ -85,7 +90,7 @@ class Network:
 
         self.triviumData = triviumData
 
-    
+
     # Init without graph for testing
     #def __init__(self, victimNodes, attackingNode, triviumData):
 
@@ -102,19 +107,19 @@ class Network:
 
 
     def Sublimate(self):
-        
+
         def edgeWeight(u, v, w):
             score = float(self.G.nodes[v]['distill_score'])
             if ((score) >= 1): score /= 10 # this is for testing, to get score in [0,1]
             return -math.log2(score)
-        
+
         def ipToTid(ip):
             trivium_id = [id for id,attributes in self.G.nodes.items() if attributes['ip'] == ip][0]
             return trivium_id
-        
+
         def tidToIp(tid):
             return self.G.nodes[tid]['ip']
-        
+
 
         length, path = nx.single_source_dijkstra(self.G, source=ipToTid(self.attackingNode), weight=edgeWeight)
 
@@ -131,7 +136,7 @@ class Network:
 
             victim.addPath(path_to_victim)
             victim.path = ipPath
-            
+
         return True
 
 
@@ -181,8 +186,9 @@ class Network:
 
         # Create the header of the document and the summary graph
         text = ""
-        header = ('<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>\n<h1> ' + str(self.triviumData['diagramName']) + ' Attack Traversal Report\n')
-        summaryGraph = "## Summary Graph\n~~~mermaid\nflowchart LR\n"
+        victimList = ""
+        header = ('<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>\n')
+        summaryGraph = "# "+ str(self.triviumData['diagramName']) + " Attack Traversal Report\n## Summary Graph\n~~~mermaid\nflowchart LR\n"
         summaryGraphCounter = {}
 
         # State the attacking node
@@ -190,7 +196,7 @@ class Network:
 
         # Loop through the victims
         for victim in self.victimNodes:
-            text += ("## Victim Node: " + victim.ip + '\n')
+            text += ("## Victim Node: [" + victim.ip + "](##" + victim.ip + ')\n')
 
             # Edge case: if there are no paths, print notice
             if(len(victim.compromisePaths) == 0):
@@ -233,8 +239,15 @@ class Network:
                     text += "~~~\n#### Weight of Path: {:.6f}\n\n".format(compromisePath.weight)
                     text += "#### Number of Nodes in Path: " + str(len(compromisePath.path) + 1) + "\n\n"
 
-                    
-        
+            # Add the victim to the list
+            victimList += "\n##" + victim.ip + "CVES Report \n"
+            cves = self.G.nodes[self.ipToTid(victim.ip)]['cve_info']
+
+            for cve in cves:
+                victimList += "["+cve+"](https://cve.mitre.org/cgi-bin/cvename.cgi?name="+cve+")\n\n"
+
+
+
         # Finish formatting the summary graph
 
         # Find the node with the highest weight
@@ -250,13 +263,32 @@ class Network:
             summaryGraph += "classDef cl" + node.replace('.','') +" fill:#" + redval + ";\n"
             summaryGraph += "class " + node + " cl" + node.replace('.','') + ";\n"
         summaryGraph += "~~~\n\n"
-        
+
         # Convert the text into mermaid markdown
-        html = markdown.markdown(summaryGraph + text, extensions=['md_mermaid'])
-        final = header + html
-        f = open(fileName + ".html", "w")
-        f.write(final)
+        html = markdown.markdown((summaryGraph + text + victimList), extensions=['md_mermaid'])
+        finalHtml = header + html
+
+        # Write the markdown to disk
+        f = open(fileName + ".md", "w")
+        f.write((summaryGraph + text + victimList))
         f.close()
+
+
+        # Write the html to disk
+        f = open(fileName + ".html", "w")
+        f.write(finalHtml)
+        f.close()
+
+        # Convert the markdown to pdf
+        args = ['pandoc', (fileName + ".md"), '-o', (fileName + ".pdf"), '--filter=mermaid-filter']
+        subprocess.Popen(args)
+
+
+    # Utilies
+    def ipToTid(self, ip):
+        trivium_id = [id for id,attributes in self.G.nodes.items() if attributes['ip'] == ip][0]
+        return trivium_id
+
 
 # Testing zone
 def main():
@@ -272,7 +304,7 @@ def main():
     parser.add_argument("-a", "--attacker", type=str, help="Override attacking nodes from diagram")
     parser.add_argument("-v", "--victim", type=str, help="Override victim nodes from diagram")
     args = parser.parse_args()
- 
+
     # Create placeholder data
     triviumData = {}
     triviumData['diagramName'] = args.diagram
@@ -357,3 +389,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
