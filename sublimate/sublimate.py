@@ -106,7 +106,7 @@ class Network:
  #       self.triviumData = triviumData
 
     def Sublimate(self, number_of_paths):
-        
+
         def edgeWeight(u, v, w):
             score = float(self.G.nodes[v]['distill_score'])
             if ((score) >= 1): score /= 10 # this is for testing, to get score in [0,1]
@@ -123,13 +123,13 @@ class Network:
 
         pathWeightPairs = []
         for path in paths:
-            weight = math.prod(self.G.nodes[node]['distill_score'] / 10 for node in path)
+            weight = math.prod(float(self.G.nodes[node]['distill_score']) for node in path)
             pathWeightPairs.append((path,weight))
-        
+
         pathWeightPairs.sort(key=lambda p: p[1], reverse=True)
         pathWeightPairs = pathWeightPairs[:number_of_paths]
 
-        
+
         for victim in self.victimNodes:
             trivium_id = ipToTid(victim.ip)
             for p,w in pathWeightPairs:
@@ -139,7 +139,7 @@ class Network:
                 ipPath = list(map(tidToIp, p))
                 path_to_victim.path = ipPath
                 victim.addPath(path_to_victim)
-
+                
         return True
 
 
@@ -195,15 +195,15 @@ class Network:
         summaryGraphCounter = {}
 
         # State the attacking node
-        text += "## Attacking Node: " + self.attackingNode + '\n'
+        text += "## Attacking Node: " + self.attackingNode + '\n\n'
 
         # Loop through the victims
         for victim in self.victimNodes:
-            text += ("## Victim Node: [" + victim.ip + "](##" + victim.ip + ')\n')
+            text += ("## Victim Node: [" + victim.ip + "](##" + victim.ip + ')\n\n')
 
             # Edge case: if there are no paths, print notice
             if(len(victim.compromisePaths) == 0):
-                text += '#### No Paths of Compromise for This Node\n'
+                text += '#### No Paths of Compromise for This Node\n\n'
 
             else:
 
@@ -230,20 +230,20 @@ class Network:
                         summaryGraphCounter[compromisePath.path[i+1]] += 1
 
                     # At the end output the path to the victim node
-                    temp += compromisePath.path[len(compromisePath.path)-1]
-                    temp += "-->"
-                    temp += (victim.ip + '\n')
+                    # temp += compromisePath.path[len(compromisePath.path)-1]
+                    # temp += "-->"
+                    # temp += (victim.ip + '\n')
 
                     # Attach the temp graph to the diagram in both places
                     text += temp
                     summaryGraph += temp
 
                     # Output the weight and number of nodes
-                    text += "~~~\n#### Weight of Path: {:.6f}\n\n".format(compromisePath.weight)
+                    text += "~~~\n\n#### Weight of Path: {:.6f}\n\n".format(compromisePath.weight)
                     text += "#### Number of Nodes in Path: " + str(len(compromisePath.path) + 1) + "\n\n"
 
             # Add the victim to the list
-            victimList += "\n##" + victim.ip + "CVES Report \n"
+            victimList += "\n##" + victim.ip + " CVES Report \n"
             cves = self.G.nodes[self.ipToTid(victim.ip)]['cve_info']
 
             for cve in cves:
