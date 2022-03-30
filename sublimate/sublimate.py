@@ -4,6 +4,11 @@ import json
 import math
 import markdown
 import matplotlib.pyplot as plt
+import pdfkit 
+import pandoc
+import subprocess
+import os
+
 
 
 class victimNode:
@@ -180,8 +185,8 @@ class Network:
 
         # Create the header of the document and the summary graph
         text = ""
-        header = ('<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>\n<h1> ' + str(self.triviumData['diagramName']) + ' Attack Traversal Report\n')
-        summaryGraph = "## Summary Graph\n~~~mermaid\nflowchart LR\n"
+        header = ('<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>\n')
+        summaryGraph = "# "+ str(self.triviumData['diagramName']) + " Attack Traversal Report\n## Summary Graph\n~~~mermaid\nflowchart LR\n"
         summaryGraphCounter = {}
 
         # State the attacking node
@@ -253,9 +258,22 @@ class Network:
         # Convert the text into mermaid markdown
         html = markdown.markdown(summaryGraph + text, extensions=['md_mermaid'])
         final = header + html
+
+        # Write the markdown to disk
+        f = open(fileName + ".md", "w")
+        f.write((summaryGraph + text))
+        f.close()
+
+
+        # Write the html to disk
         f = open(fileName + ".html", "w")
         f.write(final)
         f.close()
+
+        # Convert the markdown to pdf
+        args = ['pandoc', (fileName + ".md"), '-o', (fileName + ".pdf"), '--filter=mermaid-filter.cmd']
+        subprocess.Popen(args)
+
 
 # Testing zone
 def main():
