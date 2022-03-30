@@ -279,7 +279,7 @@ class Network:
         f.close()
 
         # Convert the markdown to pdf
-        args = ['pandoc', (fileName + ".md"), '-o', (fileName + ".pdf"), '--filter=mermaid-filter.cmd']
+        args = ['pandoc', (fileName + ".md"), '-o', (fileName + ".pdf"), '--filter=mermaid-filter']
         subprocess.Popen(args)
 
 
