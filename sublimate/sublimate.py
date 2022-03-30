@@ -106,13 +106,8 @@ class Network:
  #       self.triviumData = triviumData
 
 
-<<<<<<< HEAD
-    def Sublimate(self):
-
-=======
     def Sublimate(self, number_of_paths):
         
->>>>>>> 4a80a46 (initial implementation of N best path generation)
         def edgeWeight(u, v, w):
             score = float(self.G.nodes[v]['distill_score'])
             if ((score) >= 1): score /= 10 # this is for testing, to get score in [0,1]
@@ -124,12 +119,8 @@ class Network:
 
         def tidToIp(tid):
             return self.G.nodes[tid]['ip']
-<<<<<<< HEAD
-
-=======
         
         
->>>>>>> 4a80a46 (initial implementation of N best path generation)
 
         paths = nx.all_simple_paths(self.G, source=ipToTid(self.attackingNode), target=ipToTid(self.victimNodes[0].ip))
 
@@ -154,12 +145,6 @@ class Network:
                 victim.addPath(path_to_victim)
 
 
-<<<<<<< HEAD
-            victim.addPath(path_to_victim)
-            victim.path = ipPath
-
-=======
->>>>>>> 4a80a46 (initial implementation of N best path generation)
         return True
 
 
