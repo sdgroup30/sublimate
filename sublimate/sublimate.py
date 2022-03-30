@@ -107,9 +107,12 @@ class Network:
 
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     def Sublimate(self):
 
 =======
+=======
+>>>>>>> a63fd8a9678c6825fc6b6ddb3cd7b48f3eb692b8
     def Sublimate(self, number_of_paths):
         
 >>>>>>> 4a80a46 (initial implementation of N best path generation)
@@ -129,7 +132,11 @@ class Network:
 =======
         
         
+<<<<<<< HEAD
 >>>>>>> 4a80a46 (initial implementation of N best path generation)
+=======
+        
+>>>>>>> a63fd8a9678c6825fc6b6ddb3cd7b48f3eb692b8
 
         paths = nx.all_simple_paths(self.G, source=ipToTid(self.attackingNode), target=ipToTid(self.victimNodes[0].ip))
 
@@ -150,6 +157,7 @@ class Network:
                 path_to_victim.addToWeight(w)
                 ipPath = list(map(tidToIp, p))
                 path_to_victim.path = ipPath
+<<<<<<< HEAD
 
                 victim.addPath(path_to_victim)
 
@@ -160,6 +168,12 @@ class Network:
 
 =======
 >>>>>>> 4a80a46 (initial implementation of N best path generation)
+=======
+
+                victim.addPath(path_to_victim)
+
+
+>>>>>>> a63fd8a9678c6825fc6b6ddb3cd7b48f3eb692b8
         return True
 
 
@@ -380,6 +394,7 @@ def main():
     # Find paths to victims
     testing.Sublimate(args.number_paths)
 
+<<<<<<< HEAD
     # # Create two different paths
     # path1 = compromisePath()
     # path1.addToPath('10.0.0.4', 6)
@@ -405,6 +420,8 @@ def main():
     # testing.victimNodes[0].addPath(path1)
     # testing.victimNodes[0].addPath(path2)
     # testing.victimNodes[0].addPath(path3)
+=======
+>>>>>>> a63fd8a9678c6825fc6b6ddb3cd7b48f3eb692b8
 
     # Run the export function
     testing.MermaidExport(args.output)
