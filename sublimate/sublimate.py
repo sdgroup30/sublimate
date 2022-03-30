@@ -105,7 +105,6 @@ class Network:
 
  #       self.triviumData = triviumData
 
-
     def Sublimate(self, number_of_paths):
         
         def edgeWeight(u, v, w):
@@ -119,8 +118,6 @@ class Network:
 
         def tidToIp(tid):
             return self.G.nodes[tid]['ip']
-        
-        
 
         paths = nx.all_simple_paths(self.G, source=ipToTid(self.attackingNode), target=ipToTid(self.victimNodes[0].ip))
 
@@ -141,9 +138,7 @@ class Network:
                 path_to_victim.addToWeight(w)
                 ipPath = list(map(tidToIp, p))
                 path_to_victim.path = ipPath
-
                 victim.addPath(path_to_victim)
-
 
         return True
 
@@ -365,31 +360,6 @@ def main():
     # Find paths to victims
     testing.Sublimate(args.number_paths)
 
-    # # Create two different paths
-    # path1 = compromisePath()
-    # path1.addToPath('10.0.0.4', 6)
-    # path1.addToPath('10.0.0.7', 8)
-    # path1.addToPath('10.2.2.57', 22)
-    # path1.addToPath('10.2.2.58', 22)
-    # path1.addToPath('10.0.0.8', 22)
-
-
-    # path2 = compromisePath()
-    # path2.addToPath('10.0.0.2', 12)
-    # path2.addToPath('10.2.2.57', 22)
-    # path2.addToPath('192.168.1.1', 30)
-    # path2.addToPath('10.0.0.8', 6)
-
-    # path3 = compromisePath()
-    # path3.addToPath('10.0.0.6', 6)
-    # path3.addToPath('10.2.2.58', 22)
-    # path3.addToPath('10.0.0.8', 22)
-
-    # # Add both paths to the first victim
-    # # The second path has a higher weight
-    # testing.victimNodes[0].addPath(path1)
-    # testing.victimNodes[0].addPath(path2)
-    # testing.victimNodes[0].addPath(path3)
 
     # Run the export function
     testing.MermaidExport(args.output)
