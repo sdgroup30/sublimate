@@ -101,7 +101,7 @@ class Network:
  #       self.triviumData = triviumData
 
 
-    def Sublimate(self):
+    def Sublimate(self, number_of_paths):
         
         def edgeWeight(u, v, w):
             score = self.G.nodes[v]['distill_score']
@@ -115,23 +115,31 @@ class Network:
         def tidToIp(tid):
             return self.G.nodes[tid]['ip']
         
+        
 
-        length, path = nx.single_source_dijkstra(self.G, source=ipToTid(self.attackingNode), weight=edgeWeight)
+        paths = nx.all_simple_paths(self.G, source=ipToTid(self.attackingNode), target=ipToTid(self.victimNodes[0].ip))
 
+        pathWeightPairs = []
+        for path in paths:
+            weight = math.prod(self.G.nodes[node]['distill_score'] / 10 for node in path)
+            pathWeightPairs.append((path,weight))
+        
+        pathWeightPairs.sort(key=lambda p: p[1], reverse=True)
+        pathWeightPairs = pathWeightPairs[:number_of_paths]
 
+        
         for victim in self.victimNodes:
             trivium_id = ipToTid(victim.ip)
-            if trivium_id not in path.keys():
-                continue # there is no path
+            for p,w in pathWeightPairs:
+                if p[-1] != trivium_id: continue
+                path_to_victim = compromisePath()
+                path_to_victim.addToWeight(w)
+                ipPath = list(map(tidToIp, p))
+                path_to_victim.path = ipPath
 
-            path_to_victim = compromisePath()
-            path_to_victim.addToWeight(2**-length[trivium_id])
-            ipPath = list(map(tidToIp, path[trivium_id]))
-            path_to_victim.path = ipPath[:-1]
+                victim.addPath(path_to_victim)
 
-            victim.addPath(path_to_victim)
-            victim.path = ipPath
-            
+
         return True
 
 
@@ -186,10 +194,11 @@ def main():
     # parse the arguments
     parser.add_argument("-m", "--model", type=str, help="Model Name")
     parser.add_argument("-d", "--diagram", type=str, help="Diagram Name")
-    parser.add_argument("-i", "--input", type=str, help="Input ", required=True)
-    parser.add_argument("-o", "--output", type=str, help="Nessus Files", required=True)
+    parser.add_argument("-i", "--input", type=str, help="Input ")
+    parser.add_argument("-o", "--output", type=str, help="Nessus Files")
     parser.add_argument("-a", "--attacker", type=str, help="Override attacking nodes from diagram")
     parser.add_argument("-v", "--victim", type=str, help="Override victim nodes from diagram")
+    parser.add_argument("-n", "--number_paths", type=int, help="Quantity of top N paths to display")
     args = parser.parse_args()
 
     # Create placeholder data
@@ -241,7 +250,7 @@ def main():
     testing = Network(data, victimNodes, attackingNode, triviumData)
 
     # Find paths to victims
-    testing.Sublimate()
+    testing.Sublimate(args.number_paths)
 
 
     # Run the export function
