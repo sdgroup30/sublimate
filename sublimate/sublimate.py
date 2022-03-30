@@ -105,8 +105,7 @@ class Network:
 
  #       self.triviumData = triviumData
 
-
-    def Sublimate(self):
+    def Sublimate(self, number_of_paths):
 
         def edgeWeight(u, v, w):
             score = float(self.G.nodes[v]['distill_score'])
@@ -120,23 +119,27 @@ class Network:
         def tidToIp(tid):
             return self.G.nodes[tid]['ip']
 
+        paths = nx.all_simple_paths(self.G, source=ipToTid(self.attackingNode), target=ipToTid(self.victimNodes[0].ip))
 
-        length, path = nx.single_source_dijkstra(self.G, source=ipToTid(self.attackingNode), weight=edgeWeight)
+        pathWeightPairs = []
+        for path in paths:
+            weight = math.prod(float(self.G.nodes[node]['distill_score']) for node in path)
+            pathWeightPairs.append((path,weight))
+
+        pathWeightPairs.sort(key=lambda p: p[1], reverse=True)
+        pathWeightPairs = pathWeightPairs[:number_of_paths]
 
 
         for victim in self.victimNodes:
             trivium_id = ipToTid(victim.ip)
-            if trivium_id not in path.keys():
-                continue # there is no path
-
-            path_to_victim = compromisePath()
-            path_to_victim.addToWeight(2**-length[trivium_id])
-            ipPath = list(map(tidToIp, path[trivium_id]))
-            path_to_victim.path = ipPath[:-1]
-
-            victim.addPath(path_to_victim)
-            victim.path = ipPath
-
+            for p,w in pathWeightPairs:
+                if p[-1] != trivium_id: continue
+                path_to_victim = compromisePath()
+                path_to_victim.addToWeight(w)
+                ipPath = list(map(tidToIp, p))
+                path_to_victim.path = ipPath
+                victim.addPath(path_to_victim)
+                
         return True
 
 
@@ -192,15 +195,15 @@ class Network:
         summaryGraphCounter = {}
 
         # State the attacking node
-        text += "## Attacking Node: " + self.attackingNode + '\n'
+        text += "## Attacking Node: " + self.attackingNode + '\n\n'
 
         # Loop through the victims
         for victim in self.victimNodes:
-            text += ("## Victim Node: [" + victim.ip + "](##" + victim.ip + ')\n')
+            text += ("## Victim Node: [" + victim.ip + "](##" + victim.ip + ')\n\n')
 
             # Edge case: if there are no paths, print notice
             if(len(victim.compromisePaths) == 0):
-                text += '#### No Paths of Compromise for This Node\n'
+                text += '#### No Paths of Compromise for This Node\n\n'
 
             else:
 
@@ -227,20 +230,20 @@ class Network:
                         summaryGraphCounter[compromisePath.path[i+1]] += 1
 
                     # At the end output the path to the victim node
-                    temp += compromisePath.path[len(compromisePath.path)-1]
-                    temp += "-->"
-                    temp += (victim.ip + '\n')
+                    # temp += compromisePath.path[len(compromisePath.path)-1]
+                    # temp += "-->"
+                    # temp += (victim.ip + '\n')
 
                     # Attach the temp graph to the diagram in both places
                     text += temp
                     summaryGraph += temp
 
                     # Output the weight and number of nodes
-                    text += "~~~\n#### Weight of Path: {:.6f}\n\n".format(compromisePath.weight)
+                    text += "~~~\n\n#### Weight of Path: {:.6f}\n\n".format(compromisePath.weight)
                     text += "#### Number of Nodes in Path: " + str(len(compromisePath.path) + 1) + "\n\n"
 
             # Add the victim to the list
-            victimList += "\n##" + victim.ip + "CVES Report \n"
+            victimList += "\n##" + victim.ip + " CVES Report \n"
             cves = self.G.nodes[self.ipToTid(victim.ip)]['cve_info']
 
             for cve in cves:
@@ -299,10 +302,11 @@ def main():
     # parse the arguments
     parser.add_argument("-m", "--model", type=str, help="Model Name")
     parser.add_argument("-d", "--diagram", type=str, help="Diagram Name")
-    parser.add_argument("-i", "--input", type=str, help="Input ", required=True)
-    parser.add_argument("-o", "--output", type=str, help="Nessus Files", required=True)
+    parser.add_argument("-i", "--input", type=str, help="Input ")
+    parser.add_argument("-o", "--output", type=str, help="Nessus Files")
     parser.add_argument("-a", "--attacker", type=str, help="Override attacking nodes from diagram")
     parser.add_argument("-v", "--victim", type=str, help="Override victim nodes from diagram")
+    parser.add_argument("-n", "--number_paths", type=int, help="Quantity of top N paths to display")
     args = parser.parse_args()
 
     # Create placeholder data
@@ -354,33 +358,8 @@ def main():
     testing = Network(data, victimNodes, attackingNode, triviumData)
 
     # Find paths to victims
-    testing.Sublimate()
+    testing.Sublimate(args.number_paths)
 
-    # # Create two different paths
-    # path1 = compromisePath()
-    # path1.addToPath('10.0.0.4', 6)
-    # path1.addToPath('10.0.0.7', 8)
-    # path1.addToPath('10.2.2.57', 22)
-    # path1.addToPath('10.2.2.58', 22)
-    # path1.addToPath('10.0.0.8', 22)
-
-
-    # path2 = compromisePath()
-    # path2.addToPath('10.0.0.2', 12)
-    # path2.addToPath('10.2.2.57', 22)
-    # path2.addToPath('192.168.1.1', 30)
-    # path2.addToPath('10.0.0.8', 6)
-
-    # path3 = compromisePath()
-    # path3.addToPath('10.0.0.6', 6)
-    # path3.addToPath('10.2.2.58', 22)
-    # path3.addToPath('10.0.0.8', 22)
-
-    # # Add both paths to the first victim
-    # # The second path has a higher weight
-    # testing.victimNodes[0].addPath(path1)
-    # testing.victimNodes[0].addPath(path2)
-    # testing.victimNodes[0].addPath(path3)
 
     # Run the export function
     testing.MermaidExport(args.output)
