@@ -125,7 +125,7 @@ class Network:
 
         for victim in self.victimNodes:
             trivium_id = ipToTid(victim.ip)
-            if (trivium_id not in path.keys()):
+            if trivium_id not in path.keys():
                 continue # there is no path
 
             path_to_victim = compromisePath()
@@ -295,7 +295,7 @@ def main():
     # initialize parser
     parser = argparse.ArgumentParser()
 
-    # parse the arguements
+    # parse the arguments
     parser.add_argument("-m", "--model", type=str, help="Model Name")
     parser.add_argument("-d", "--diagram", type=str, help="Diagram Name")
     parser.add_argument("-i", "--input", type=str, help="Input ", required=True)
@@ -309,6 +309,40 @@ def main():
     triviumData['diagramName'] = args.diagram
     victimNodes = [args.victim]
     attackingNode = args.attacker
+    
+    # Read victim and attackers from Trivium
+    if not args.victim or not args.attacker:
+        if args.model and args.diagram:
+            diagramData = trivium.api.element.get(args.model, element=args.diagram)
+            ids = list(diagramData["custom"]["diagramContents"].keys())
+            params = {'ids' : ','.join(ids)}
+            elements = trivium.api.element.get(args.model, params=params)
+            actorNodes = [e for e in elements if e['type'] == 'td.systems.actor']
+
+            if not args.attacker:
+                attackingActorNodes = [actor for actor in actorNodes if actor['name'].lower() == 'start']
+                if len(attackingActorNodes) != 1:
+                    print('error: the attacker must be labeled with an actor named \'start\' in the diagram')
+                    exit()
+
+                # Ignore additional actors called 'start' and additional edges to nodes
+                startEdgeID = attackingActorNodes[0]['sourceOf'][0]
+                startNode = [node for node in elements if startEdgeID in node['targetOf']][0]
+                attackingNode = startNode['custom']['properties']['ip']['value']
+            if not args.victim:
+                victimActorNodes = [actor for actor in actorNodes if actor['name'].lower() == 'end']
+                if len(victimActorNodes) != 1:
+                    print('error: the victim must be labeled with an actor named \'end\' in the diagram')
+                    exit()
+
+                # Ignore additional actors called 'end' and additional edges to nodes
+                startEdgeID = victimActorNodes[0]['sourceOf'][0]
+                endNode = [node for node in elements if startEdgeID in node['targetOf']][0]
+                victimNodes = [endNode['custom']['properties']['ip']['value']]
+
+        else:
+            print("error: attacker or victim nodes not specified")
+            exit()
 
     # Read in data
     f = open(args.input, "r")
@@ -354,3 +388,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
