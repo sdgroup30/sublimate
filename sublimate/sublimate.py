@@ -194,12 +194,15 @@ class Network:
         summaryGraph = "# "+ str(self.triviumData['diagramName']) + " Attack Traversal Report\n## Summary Graph\n~~~mermaid\nflowchart LR\n"
         summaryGraphCounter = {}
 
+        # Create a set of nodes that must be listed at the end
+        listedNodes = set()
+
         # State the attacking node
         text += "## Attacking Node: " + self.attackingNode + '\n\n'
 
         # Loop through the victims
         for victim in self.victimNodes:
-            text += ("## Victim Node: [" + victim.ip + "](##" + victim.ip + ')\n\n')
+            text += ("## Victim Node: [" + victim.ip + "](#" + victim.ip + ')\n\n')
 
             # Edge case: if there are no paths, print notice
             if(len(victim.compromisePaths) == 0):
@@ -223,6 +226,13 @@ class Network:
                         temp += "-->"
                         temp += compromisePath.path[i+1] + "\n"
 
+                        # add the link to the last node in the chain
+                        temp += 'click ' + compromisePath.path[i+1] + ' "./' + fileName + '.html#' + compromisePath.path[i+1] + '" "Link to Vulnerability Report"\n'
+
+                        # add the effected node to the effected nodes set if applicable
+                        listedNodes.add(compromisePath.path[i+1])
+
+
                         # Add one occurence to the node that is being accessed for the summaryGraph
                         if not compromisePath.path[i+1] in summaryGraphCounter:
                             summaryGraphCounter[compromisePath.path[i+1]] = 0
@@ -242,9 +252,14 @@ class Network:
                     text += "~~~\n\n#### Weight of Path: {:.6f}\n\n".format(compromisePath.weight)
                     text += "#### Number of Nodes in Path: " + str(len(compromisePath.path) + 1) + "\n\n"
 
-            # Add the victim to the list
-            victimList += "\n##" + victim.ip + " CVES Report \n"
-            cves = self.G.nodes[self.ipToTid(victim.ip)]['cve_info']
+
+
+        # Create the list of effected nodes
+        for listedNode in listedNodes:
+
+            # Create a header
+            victimList += "\n##" + listedNode + " CVE Report {: id=" + listedNode + "}\n"
+            cves = self.G.nodes[self.ipToTid(listedNode)]['cve_info']
 
             for cve in cves:
                 victimList += "["+cve+"](https://cve.mitre.org/cgi-bin/cvename.cgi?name="+cve+")\n\n"
@@ -268,7 +283,7 @@ class Network:
         summaryGraph += "~~~\n\n"
 
         # Convert the text into mermaid markdown
-        html = markdown.markdown((summaryGraph + text + victimList), extensions=['md_mermaid'])
+        html = markdown.markdown((summaryGraph + text + victimList), extensions=['md_mermaid', 'attr_list'])
         finalHtml = header + html
 
         # Write the markdown to disk
