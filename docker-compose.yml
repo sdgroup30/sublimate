@@ -1,6 +1,7 @@
-version: "3.9"
+version: "2"
 services:
   sublimate:
     build: .
     volumes:
       - .:/sublimate
+      - ${HOME}/.trivium:/home/temp/.trivium

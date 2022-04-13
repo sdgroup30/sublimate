@@ -5,8 +5,10 @@
 # Use basic python image
 FROM python:3.8-slim-buster
 
-# Create distil dir
+# Create dir
 WORKDIR /sublimate
+
+# Add user
 
 # Copy over the requirements for pip
 COPY requirements.txt requirements.txt
@@ -24,7 +26,10 @@ RUN pip3 install -r requirements.txt && \
 
 
 # Copy everything for sublimate to the container image
-# COPY . .
+#COPY /.trivium /home/temp/.trivium
+
+RUN useradd -m temp
+USER temp
 
 # set sublimate.py as the entrypoint
 ENTRYPOINT ["python","./sublimate/sublimate.py"]
