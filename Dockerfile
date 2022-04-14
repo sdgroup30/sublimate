@@ -12,6 +12,7 @@ WORKDIR /sublimate
 
 # Copy over the requirements for pip
 COPY requirements.txt requirements.txt
+copy sublimate /sublimate/sublimate
 
 # install the required packages
 RUN pip3 install -r requirements.txt && \
@@ -31,5 +32,7 @@ RUN pip3 install -r requirements.txt && \
 RUN useradd -m temp
 USER temp
 
+WORKDIR /out
+
 # set sublimate.py as the entrypoint
-ENTRYPOINT ["python","./sublimate/sublimate.py"]
+ENTRYPOINT ["python","/sublimate/sublimate/sublimate.py"]
