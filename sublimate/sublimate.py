@@ -9,6 +9,7 @@ import pandoc
 import subprocess
 import os
 import trivium
+import datetime
 
 
 
@@ -122,9 +123,16 @@ class Network:
         paths = nx.all_simple_paths(self.G, source=ipToTid(self.attackingNode), target=ipToTid(self.victimNodes[0].ip))
 
         pathWeightPairs = []
+        max_weight = float("-inf")
+        min_weight = float("inf")
         for path in paths:
             weight = math.prod(float(self.G.nodes[node]['distill_score']) for node in path)
             pathWeightPairs.append((path,weight))
+            
+            if weight > max_weight:
+                max_weight = weight
+            if weight < min_weight:
+                min_weight = weight
 
         pathWeightPairs.sort(key=lambda p: p[1], reverse=True)
         pathWeightPairs = pathWeightPairs[:number_of_paths]
@@ -133,6 +141,7 @@ class Network:
         for victim in self.victimNodes:
             trivium_id = ipToTid(victim.ip)
             for p,w in pathWeightPairs:
+                w = float((w - min_weight) / (max_weight - min_weight))
                 if p[-1] != trivium_id: continue
                 path_to_victim = compromisePath()
                 path_to_victim.addToWeight(w)
@@ -191,15 +200,18 @@ class Network:
         text = ""
         victimList = ""
         header = ('<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>\n')
-        summaryGraph = "# "+ str(self.triviumData['diagramName']) + " Attack Traversal Report\n## Summary Graph\n~~~mermaid\nflowchart LR\n"
+        summaryGraph = "# "+ str(self.triviumData['diagramName']) + " Attack Traversal Report {: id=top} \n## Summary Graph\n~~~mermaid\nflowchart LR\n"
         summaryGraphCounter = {}
+
+        # Create a set of nodes that must be listed at the end
+        listedNodes = set()
 
         # State the attacking node
         text += "## Attacking Node: " + self.attackingNode + '\n\n'
 
         # Loop through the victims
         for victim in self.victimNodes:
-            text += ("## Victim Node: [" + victim.ip + "](##" + victim.ip + ')\n\n')
+            text += ("## Victim Node: [" + victim.ip + "](#" + victim.ip + ')\n\n')
 
             # Edge case: if there are no paths, print notice
             if(len(victim.compromisePaths) == 0):
@@ -223,6 +235,13 @@ class Network:
                         temp += "-->"
                         temp += compromisePath.path[i+1] + "\n"
 
+                        # add the link to the last node in the chain
+                        temp += 'click ' + compromisePath.path[i+1] + ' "./' + fileName + '.html#' + compromisePath.path[i+1] + '" "Link to Vulnerability Report"\n'
+
+                        # add the effected node to the effected nodes set if applicable
+                        listedNodes.add(compromisePath.path[i+1])
+
+
                         # Add one occurence to the node that is being accessed for the summaryGraph
                         if not compromisePath.path[i+1] in summaryGraphCounter:
                             summaryGraphCounter[compromisePath.path[i+1]] = 0
@@ -242,9 +261,14 @@ class Network:
                     text += "~~~\n\n#### Weight of Path: {:.6f}\n\n".format(compromisePath.weight)
                     text += "#### Number of Nodes in Path: " + str(len(compromisePath.path) + 1) + "\n\n"
 
-            # Add the victim to the list
-            victimList += "\n##" + victim.ip + " CVES Report \n"
-            cves = self.G.nodes[self.ipToTid(victim.ip)]['cve_info']
+
+
+        # Create the list of effected nodes
+        for listedNode in listedNodes:
+
+            # Create a header
+            victimList += "\n##" + listedNode + " CVE Report &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; [Go back to top](#top)  {: id=" + listedNode + "} \n" 
+            cves = self.G.nodes[self.ipToTid(listedNode)]['cve_info']
 
             for cve in cves:
                 victimList += "["+cve+"](https://cve.mitre.org/cgi-bin/cvename.cgi?name="+cve+")\n\n"
@@ -268,7 +292,7 @@ class Network:
         summaryGraph += "~~~\n\n"
 
         # Convert the text into mermaid markdown
-        html = markdown.markdown((summaryGraph + text + victimList), extensions=['md_mermaid'])
+        html = markdown.markdown((summaryGraph + text + victimList), extensions=['md_mermaid', 'attr_list'])
         finalHtml = header + html
 
         # Write the markdown to disk
@@ -281,10 +305,6 @@ class Network:
         f = open(fileName + ".html", "w")
         f.write(finalHtml)
         f.close()
-
-        # Convert the markdown to pdf
-        args = ['pandoc', (fileName + ".md"), '-o', (fileName + ".pdf"), '--filter=mermaid-filter']
-        subprocess.Popen(args)
 
 
     # Utilies
@@ -302,12 +322,15 @@ def main():
     # parse the arguments
     parser.add_argument("-m", "--model", type=str, help="Model Name")
     parser.add_argument("-d", "--diagram", type=str, help="Diagram Name")
-    parser.add_argument("-i", "--input", type=str, help="Input ")
-    parser.add_argument("-o", "--output", type=str, help="Nessus Files")
+    parser.add_argument("-i", "--input", type=str, help="Input ", required=True)
+    parser.add_argument("-o", "--output", type=str, help="Nessus Files", required=True)
     parser.add_argument("-a", "--attacker", type=str, help="Override attacking nodes from diagram")
     parser.add_argument("-v", "--victim", type=str, help="Override victim nodes from diagram")
     parser.add_argument("-n", "--number_paths", type=int, help="Quantity of top N paths to display")
     args = parser.parse_args()
+
+    print("Starting Sublimate at " + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    print()
 
     # Create placeholder data
     triviumData = {}
@@ -318,6 +341,9 @@ def main():
     # Read victim and attackers from Trivium
     if not args.victim or not args.attacker:
         if args.model and args.diagram:
+            print("Reading attack and victim from Trivium...")
+            print()
+            
             diagramData = trivium.api.element.get(args.model, element=args.diagram)
             ids = list(diagramData["custom"]["diagramContents"].keys())
             params = {'ids' : ','.join(ids)}
@@ -350,20 +376,26 @@ def main():
             exit()
 
     # Read in data
+    print("Reading in graph data...")
+    print()
     f = open(args.input, "r")
     data = f.read()
     f.close()
 
+    print("Finding paths...")
+    print()
     # Create test network
     testing = Network(data, victimNodes, attackingNode, triviumData)
 
     # Find paths to victims
     testing.Sublimate(args.number_paths)
 
-
+    print("Outputting report...")
+    print()
     # Run the export function
     testing.MermaidExport(args.output)
 
+    print("DONE")
 
 
 if __name__ == "__main__":
