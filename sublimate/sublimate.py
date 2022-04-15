@@ -9,6 +9,7 @@ import pandoc
 import subprocess
 import os
 import trivium
+import datetime
 
 
 
@@ -305,10 +306,6 @@ class Network:
         f.write(finalHtml)
         f.close()
 
-        # Convert the markdown to pdf
-        args = ['pandoc', (fileName + ".md"), '-o', (fileName + ".pdf"), '--filter=mermaid-filter']
-        subprocess.Popen(args)
-
 
     # Utilies
     def ipToTid(self, ip):
@@ -332,6 +329,9 @@ def main():
     parser.add_argument("-n", "--number_paths", type=int, help="Quantity of top N paths to display")
     args = parser.parse_args()
 
+    print("Starting Sublimate at " + str(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    print()
+
     # Create placeholder data
     triviumData = {}
     triviumData['diagramName'] = args.diagram
@@ -341,6 +341,9 @@ def main():
     # Read victim and attackers from Trivium
     if not args.victim or not args.attacker:
         if args.model and args.diagram:
+            print("Reading attack and victim from Trivium...")
+            print()
+            
             diagramData = trivium.api.element.get(args.model, element=args.diagram)
             ids = list(diagramData["custom"]["diagramContents"].keys())
             params = {'ids' : ','.join(ids)}
@@ -373,17 +376,22 @@ def main():
             exit()
 
     # Read in data
+    print("Reading in graph data...")
+    print()
     f = open(args.input, "r")
     data = f.read()
     f.close()
 
+    print("Finding paths...")
+    print()
     # Create test network
     testing = Network(data, victimNodes, attackingNode, triviumData)
 
     # Find paths to victims
     testing.Sublimate(args.number_paths)
 
-
+    print("Outputting report...")
+    print()
     # Run the export function
     testing.MermaidExport(args.output)
 
