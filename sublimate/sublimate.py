@@ -200,7 +200,7 @@ class Network:
         text = ""
         victimList = ""
         header = ('<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>\n')
-        summaryGraph = "# "+ str(self.triviumData['diagramName']) + " Attack Traversal Report\n## Summary Graph\n~~~mermaid\nflowchart LR\n"
+        summaryGraph = "# "+ str(self.triviumData['diagramName']) + " Attack Traversal Report {: id=top} \n## Summary Graph\n~~~mermaid\nflowchart LR\n"
         summaryGraphCounter = {}
 
         # Create a set of nodes that must be listed at the end
@@ -267,7 +267,7 @@ class Network:
         for listedNode in listedNodes:
 
             # Create a header
-            victimList += "\n##" + listedNode + " CVE Report {: id=" + listedNode + "}\n"
+            victimList += "\n##" + listedNode + " CVE Report &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; [Go back to top](#top)  {: id=" + listedNode + "} \n" 
             cves = self.G.nodes[self.ipToTid(listedNode)]['cve_info']
 
             for cve in cves:
