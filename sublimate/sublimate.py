@@ -395,6 +395,7 @@ def main():
     # Run the export function
     testing.MermaidExport(args.output)
 
+    print("DONE")
 
 
 if __name__ == "__main__":
