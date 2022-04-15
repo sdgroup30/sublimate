@@ -122,9 +122,16 @@ class Network:
         paths = nx.all_simple_paths(self.G, source=ipToTid(self.attackingNode), target=ipToTid(self.victimNodes[0].ip))
 
         pathWeightPairs = []
+        max_weight = float("-inf")
+        min_weight = float("inf")
         for path in paths:
             weight = math.prod(float(self.G.nodes[node]['distill_score']) for node in path)
             pathWeightPairs.append((path,weight))
+            
+            if weight > max_weight:
+                max_weight = weight
+            if weight < min_weight:
+                min_weight = weight
 
         pathWeightPairs.sort(key=lambda p: p[1], reverse=True)
         pathWeightPairs = pathWeightPairs[:number_of_paths]
@@ -133,6 +140,7 @@ class Network:
         for victim in self.victimNodes:
             trivium_id = ipToTid(victim.ip)
             for p,w in pathWeightPairs:
+                w = float((w - min_weight) / (max_weight - min_weight))
                 if p[-1] != trivium_id: continue
                 path_to_victim = compromisePath()
                 path_to_victim.addToWeight(w)
@@ -317,8 +325,8 @@ def main():
     # parse the arguments
     parser.add_argument("-m", "--model", type=str, help="Model Name")
     parser.add_argument("-d", "--diagram", type=str, help="Diagram Name")
-    parser.add_argument("-i", "--input", type=str, help="Input ")
-    parser.add_argument("-o", "--output", type=str, help="Nessus Files")
+    parser.add_argument("-i", "--input", type=str, help="Input ", required=True)
+    parser.add_argument("-o", "--output", type=str, help="Nessus Files", required=True)
     parser.add_argument("-a", "--attacker", type=str, help="Override attacking nodes from diagram")
     parser.add_argument("-v", "--victim", type=str, help="Override victim nodes from diagram")
     parser.add_argument("-n", "--number_paths", type=int, help="Quantity of top N paths to display")
